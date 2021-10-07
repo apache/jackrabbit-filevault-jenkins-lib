@@ -47,18 +47,22 @@ def buildStage(final int jdkVersion, final String nodeLabel, final boolean isMai
                 timeout(60) {
                     echo "Running on node ${env.NODE_NAME}"
                     checkout scm
-                    String mavenArguments
-                    if (isMainBuild) {
-                        // clean must be executed separately as otherwise local staging directory (below target/nexus-staging) is overwritten (https://issues.sonatype.org/browse/NEXUS-29206)
-                        executeMaven(jdkLabel, 'clean', 'EXPLICIT')
-                        mavenArguments = "-U install site ${stagingPluginGav}:deploy -DskipRemoteStaging=true -Pjacoco-report -Dlogback.configurationFile=vault-core/src/test/resources/logback-only-errors.xml"
-                    } else {
-                        mavenArguments = '-U clean verify site'
-                    }
-                    executeMaven(jdkLabel, mavenArguments, 'IMPLICIT')
-                    if (isMainBuild && isOnMainBranch()) {
-                        // Stash the build results so we can deploy them on another node
-                        stash name: 'filevault-build-snapshots', includes: '**/nexus-staging/**'
+                    try {
+                        String mavenArguments
+                        if (isMainBuild) {
+                            // clean must be executed separately as otherwise local staging directory (below target/nexus-staging) is overwritten (https://issues.sonatype.org/browse/NEXUS-29206)
+                            executeMaven(jdkLabel, 'clean', 'EXPLICIT')
+                            mavenArguments = "-U install site ${stagingPluginGav}:deploy -DskipRemoteStaging=true -Pjacoco-report -Dlogback.configurationFile=vault-core/src/test/resources/logback-only-errors.xml"
+                        } else {
+                            mavenArguments = '-U clean verify site'
+                        }
+                        executeMaven(jdkLabel, mavenArguments, 'IMPLICIT')
+                        if (isMainBuild && isOnMainBranch()) {
+                            // Stash the build results so we can deploy them on another node
+                            stash name: 'filevault-build-snapshots', includes: '**/nexus-staging/**'
+                        }
+                    } finally {
+                        junit '**/target/surefire-reports/**/*.xml,**/target/failsafe-reports*/**/*.xml'
                     }
                 }
             }
