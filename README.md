@@ -1,11 +1,11 @@
 # Jenkins Shared Library
 
-This library is used for all FileVault Jenkins builds and enabled on https://ci-builds.apache.org/job/Jackrabbit/job/filevault/ and ...
+This library is used for all FileVault Jenkins builds and enabled on <https://ci-builds.apache.org/job/Jackrabbit/job/filevault/>
 
 It follows the structure outlined at <https://www.jenkins.io/doc/book/pipeline/shared-libraries/>
 
 
-It is supposed to be called in a Jenkinsfile like this
+It is supposed to be called in a `Jenkinsfile` like this
 
 ```
 fileVaultMavenStdBuild([11, 8, 17], 11, [ "ubuntu", "Windows"], "ubuntu")

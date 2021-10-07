@@ -102,6 +102,7 @@ def stagesFor(List<Integer> jdkVersions, int mainJdkVersion, List<String> nodeLa
     return stageMap
 }
 
+// valid node labels in https://cwiki.apache.org/confluence/display/INFRA/ci-builds.apache.org
 def call(List<Integer> jdkVersions, int mainJdkVersion, List<String> nodeLabels, String mainNodeLabel) {
     parallel stagesFor(jdkVersions, mainJdkVersion, nodeLabels, mainNodeLabel)
 }
