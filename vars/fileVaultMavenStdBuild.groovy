@@ -35,7 +35,7 @@ def executeMaven(String jdkLabel, String mavenArguments, String publisherStrateg
     }
 }
 
-def buildStage(final int jdkVersion, final String nodeLabel, final boolean isMainBuild, final String sonarProjektKey) {
+def buildStage(final int jdkVersion, final String nodeLabel, final boolean isMainBuild, final String sonarProjectKey) {
     return {
         // https://cwiki.apache.org/confluence/display/INFRA/JDK+Installation+Matrix
         def availableJDKs = [ 8: 'jdk_1.8_latest', 9: 'jdk_1.9_latest', 10: 'jdk_10_latest', 11: 'jdk_11_latest', 12: 'jdk_12_latest', 13: 'jdk_13_latest', 14: 'jdk_14_latest', 15: 'jdk_15_latest', 16: 'jdk_16_latest', 17: 'jdk_17_latest', 18: 'jdk_18_latest']
