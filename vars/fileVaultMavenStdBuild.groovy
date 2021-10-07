@@ -104,5 +104,9 @@ def stagesFor(List<Integer> jdkVersions, int mainJdkVersion, List<String> nodeLa
 
 // valid node labels in https://cwiki.apache.org/confluence/display/INFRA/ci-builds.apache.org
 def call(List<Integer> jdkVersions, int mainJdkVersion, List<String> nodeLabels, String mainNodeLabel) {
+    // adjust some job properties (https://www.jenkins.io/doc/pipeline/steps/workflow-multibranch/#properties-set-job-properties)
+    properties([
+        buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10'))
+    ])
     parallel stagesFor(jdkVersions, mainJdkVersion, nodeLabels, mainNodeLabel)
 }
