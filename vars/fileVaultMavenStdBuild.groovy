@@ -71,7 +71,7 @@ def buildStage(final int jdkVersion, final String nodeLabel, final boolean isMai
                     timeout(60) {
                         withCredentials([string(credentialsId: 'sonarcloud-filevault-token', variable: 'SONAR_TOKEN')]) {
                             String mavenArguments = "${sonarPluginGav}:sonar -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=apache -Dsonar.projectKey=${sonarProjectKey}"
-                            executeMaven(jdkLabel, mavenArguments, 'IMPLICIT')
+                            executeMaven(jdkLabel, mavenArguments, 'EXPLICIT')
                         }
                     }
                 }
@@ -81,7 +81,7 @@ def buildStage(final int jdkVersion, final String nodeLabel, final boolean isMai
             stage("Deployment") {
                 node('nexus-deploy') {
                     timeout(60) {
-                        // nexus deployment needs pom.xmlß
+                        // nexus deployment needs pom.xml
                         checkout scm
                         // Unstash the previously stashed build results.
                         unstash name: 'filevault-build-snapshots'
