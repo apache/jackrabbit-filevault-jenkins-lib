@@ -8,10 +8,11 @@ It follows the structure outlined at <https://www.jenkins.io/doc/book/pipeline/s
 It is supposed to be called in a `Jenkinsfile` like this
 
 ```
-fileVaultMavenStdBuild([11, 8, 17], 11, [ "ubuntu", "Windows"], "ubuntu")
+fileVaultMavenStdBuild([11, 8, 17], 11, [ "ubuntu", "Windows"], "ubuntu", "apache_jackrabbit-filevault")
 ```
 
 The first argument is an array of JDK versions to build with, the second one the main JDK version.
 The third argument is an array of node labels to build on, the fourth one the main node label.
+The fifth argument is the SonarCloud project key.
 
 The main parameters specify on which environment the lengthy (environment independent) steps should happen like SonarQube analysis and optional deployment.

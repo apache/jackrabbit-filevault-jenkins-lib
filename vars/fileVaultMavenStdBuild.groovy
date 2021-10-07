@@ -35,7 +35,7 @@ def executeMaven(String jdkLabel, String mavenArguments, String publisherStrateg
     }
 }
 
-def buildStage(final int jdkVersion, final String nodeLabel, final boolean isMainBuild) {
+def buildStage(final int jdkVersion, final String nodeLabel, final boolean isMainBuild, final String sonarProjektKey) {
     return {
         // https://cwiki.apache.org/confluence/display/INFRA/JDK+Installation+Matrix
         def availableJDKs = [ 8: 'jdk_1.8_latest', 9: 'jdk_1.9_latest', 10: 'jdk_10_latest', 11: 'jdk_11_latest', 12: 'jdk_12_latest', 13: 'jdk_13_latest', 14: 'jdk_14_latest', 15: 'jdk_15_latest', 16: 'jdk_16_latest', 17: 'jdk_17_latest', 18: 'jdk_18_latest']
@@ -70,7 +70,7 @@ def buildStage(final int jdkVersion, final String nodeLabel, final boolean isMai
                 stage("SonarCloud Analysis") {
                     timeout(60) {
                         withCredentials([string(credentialsId: 'sonarcloud-filevault-token', variable: 'SONAR_TOKEN')]) {
-                            String mavenArguments = "${sonarPluginGav}:sonar -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=apache -Dsonar.projectKey=apache_jackrabbit-filevault"
+                            String mavenArguments = "${sonarPluginGav}:sonar -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=apache -Dsonar.projectKey=${sonarProjectKey}"
                             executeMaven(jdkLabel, mavenArguments, 'IMPLICIT')
                         }
                     }
@@ -95,22 +95,22 @@ def buildStage(final int jdkVersion, final String nodeLabel, final boolean isMai
     }
 }
 
-def stagesFor(List<Integer> jdkVersions, int mainJdkVersion, List<String> nodeLabels, String mainNodeLabel) {
+def stagesFor(List<Integer> jdkVersions, int mainJdkVersion, List<String> nodeLabels, String mainNodeLabel, String sonarProjectKey) {
     def stageMap = [:]
     for (nodeLabel in nodeLabels) {
         for (jdkVersion in jdkVersions) {
             boolean isMainBuild = (jdkVersion == mainJdkVersion && nodeLabel == mainNodeLabel)
-            stageMap["JDK ${jdkVersion}, ${nodeLabel}${isMainBuild ? ' (Main)' : ''}"] = buildStage(jdkVersion, nodeLabel, isMainBuild)
+            stageMap["JDK ${jdkVersion}, ${nodeLabel}${isMainBuild ? ' (Main)' : ''}"] = buildStage(jdkVersion, nodeLabel, isMainBuild, sonarProjectKey)
         }
     }
     return stageMap
 }
 
 // valid node labels in https://cwiki.apache.org/confluence/display/INFRA/ci-builds.apache.org
-def call(List<Integer> jdkVersions, int mainJdkVersion, List<String> nodeLabels, String mainNodeLabel) {
+def call(List<Integer> jdkVersions, int mainJdkVersion, List<String> nodeLabels, String mainNodeLabel, String sonarProjectKey) {
     // adjust some job properties (https://www.jenkins.io/doc/pipeline/steps/workflow-multibranch/#properties-set-job-properties)
     properties([
         buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10'))
     ])
-    parallel stagesFor(jdkVersions, mainJdkVersion, nodeLabels, mainNodeLabel)
+    parallel stagesFor(jdkVersions, mainJdkVersion, nodeLabels, mainNodeLabel, sonarProjectKey)
 }
