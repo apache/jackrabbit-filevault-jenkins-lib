@@ -26,7 +26,7 @@ def executeMaven(String jdkLabel, String mavenArguments, String publisherStrateg
         maven: 'maven_3_latest',
         jdk: jdkLabel,
         mavenLocalRepo: '.repository',
-        publisherStrategy: 'IMPLICIT') {
+        publisherStrategy: publisherStrategy) {
         if (isUnix()) {
             sh "mvn -B ${mavenArguments}"
         } else {
