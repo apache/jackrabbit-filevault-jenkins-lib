@@ -40,7 +40,7 @@ def buildStage(final int jdkVersion, final String nodeLabel, final boolean isMai
         // https://cwiki.apache.org/confluence/display/INFRA/JDK+Installation+Matrix
         def availableJDKs = [ 8: 'jdk_1.8_latest', 9: 'jdk_1.9_latest', 10: 'jdk_10_latest', 11: 'jdk_11_latest', 12: 'jdk_12_latest', 13: 'jdk_13_latest', 14: 'jdk_14_latest', 15: 'jdk_15_latest', 16: 'jdk_16_latest', 17: 'jdk_17_latest', 18: 'jdk_18_latest']
         final String jdkLabel = availableJDKs[jdkVersion]
-        final String stagingPluginGav = "org.sonatype.plugins:nexus-staging-maven-plugin:1.6.8"
+        final String wagonPluginGav = "org.codehaus.mojo:wagon-maven-plugin:2.0.2"
         final String sonarPluginGav = "org.sonarsource.scanner.maven:sonar-maven-plugin:3.9.0.2155"
         node(label: nodeLabel) {
             stage("${isMainBuild ? 'Main ' : ''}Maven Build (JDK ${jdkVersion}, ${nodeLabel})") {
@@ -50,16 +50,19 @@ def buildStage(final int jdkVersion, final String nodeLabel, final boolean isMai
                     try {
                         String mavenArguments
                         if (isMainBuild) {
-                            // clean must be executed separately as otherwise local staging directory (below target/nexus-staging) is overwritten (https://issues.sonatype.org/browse/NEXUS-29206)
-                            executeMaven(jdkLabel, 'clean', 'EXPLICIT')
-                            mavenArguments = "-U install site ${stagingPluginGav}:deploy -DskipRemoteStaging=true -Pjacoco-report -Dlogback.configurationFile=vault-core/src/test/resources/logback-only-errors.xml"
+                            String localRepoPath = "${env.WORKSPACE}/local-snapshots-dir"
+                            // Make sure the directory is wiped.
+                            dir(localRepoPath) {
+                                deleteDir()
+                            }
+                            mavenArguments = "-U clean site deploy -DaltDeploymentRepository=snapshot-repo::default::file:${localRepoPath} -Pjacoco-report -Dlogback.configurationFile=vault-core/src/test/resources/logback-only-errors.xml"
                         } else {
                             mavenArguments = '-U clean verify site'
                         }
                         executeMaven(jdkLabel, mavenArguments, 'IMPLICIT')
                         if (isMainBuild && isOnMainBranch()) {
                             // Stash the build results so we can deploy them on another node
-                            stash name: 'filevault-build-snapshots', includes: '**/nexus-staging/**'
+                            stash name: 'local-snapshots-dir', includes: 'local-snapshots-dir/**'
                         }
                     } finally {
                         junit '**/target/surefire-reports/**/*.xml,**/target/failsafe-reports*/**/*.xml'
@@ -81,12 +84,12 @@ def buildStage(final int jdkVersion, final String nodeLabel, final boolean isMai
             stage("Deployment") {
                 node('nexus-deploy') {
                     timeout(60) {
-                        // nexus deployment needs pom.xml
+                        // Nexus deployment needs pom.xml
                         checkout scm
                         // Unstash the previously stashed build results.
-                        unstash name: 'filevault-build-snapshots'
-                        // https://github.com/sonatype/nexus-maven-plugins/tree/master/staging/maven-plugin#deploy-staged
-                        String mavenArguments = "${stagingPluginGav}:deploy-staged -DskipStaging=true"
+                        unstash name: 'local-snapshots-dir'
+                        // https://www.mojohaus.org/wagon-maven-plugin/merge-maven-repos-mojo.html
+                        String mavenArguments = "${wagonPluginGav}:merge-maven-repos -Dwagon.target=https://repository.apache.org/content/repositories/snapshots -Dwagon.targetId=apache.snapshots.https -Dwagon.source=file:${env.WORKSPACE}/local-snapshots-dir"
                         executeMaven(jdkLabel, mavenArguments, 'EXPLICIT')
                     }
                 }
