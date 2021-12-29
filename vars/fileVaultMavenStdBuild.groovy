@@ -22,8 +22,12 @@ def isOnMainBranch() {
 }
 
 def executeMaven(String jdkLabel, String mavenArguments, String publisherStrategy) {
+    executeMaven(jdkLabel, getMavenLabel('3'), mavenArguments, publisherStrategy)
+}
+
+def executeMaven(String jdkLabel, String mavenLabel, String mavenArguments, String publisherStrategy) {
     withMaven(
-        maven: 'maven_3_latest',
+        maven: mavenLabel,
         jdk: jdkLabel,
         mavenLocalRepo: '.repository',
         publisherStrategy: publisherStrategy) {
@@ -35,16 +39,38 @@ def executeMaven(String jdkLabel, String mavenArguments, String publisherStrateg
     }
 }
 
-def buildStage(final int jdkVersion, final String nodeLabel, final boolean isMainBuild, final String sonarProjectKey) {
+// always major.minor.qualifier version parts or just one (which means latest of that major version)
+String getMavenLabel(String mavenVersion) {
+    final String versionLabel
+    if (mavenVersion ==~ /\d+/) {
+        versionLabel = "${mavenVersion}_latest"
+    } else if (mavenVersion ==~ /\d+\.\d+\.\d+/) {
+        // make sure it
+        final String suffix
+        if (isUnix()) {
+            suffix = ""
+        } else {
+            suffix = "_windows"
+        }
+        versionLabel = "${mavenVersion}${suffix}"
+    } else {
+        error('mavenVersion must be either one integer or three integers separated by dot')
+    }
+    // valid installation names in https://cwiki.apache.org/confluence/display/INFRA/Maven+Installation+Matrix and https://github.com/apache/infrastructure-p6/blob/production/modules/jenkins_client_master/files/hudson.tasks.Maven.xml
+    return "maven_${versionLabel}"
+}
+
+def buildStage(final int jdkVersion, final String nodeLabel, final String mavenVersion, final boolean isMainBuild, final String sonarProjectKey) {
     return {
         // https://cwiki.apache.org/confluence/display/INFRA/JDK+Installation+Matrix
-        def availableJDKs = [ 8: 'jdk_1.8_latest', 9: 'jdk_1.9_latest', 10: 'jdk_10_latest', 11: 'jdk_11_latest', 12: 'jdk_12_latest', 13: 'jdk_13_latest', 14: 'jdk_14_latest', 15: 'jdk_15_latest', 16: 'jdk_16_latest', 17: 'jdk_17_latest', 18: 'jdk_18_latest']
+        def availableJDKs = [ 8: 'jdk_1.8_latest', 9: 'jdk_1.9_latest', 10: 'jdk_10_latest', 11: 'jdk_11_latest', 12: 'jdk_12_latest', 13: 'jdk_13_latest', 14: 'jdk_14_latest', 15: 'jdk_15_latest', 16: 'jdk_16_latest', 17: 'jdk_17_latest', 18: 'jdk_18_latest', 19: 'jdk_19_latest']
         final String jdkLabel = availableJDKs[jdkVersion]
         final String wagonPluginGav = "org.codehaus.mojo:wagon-maven-plugin:2.0.2"
-        final String sonarPluginGav = "org.sonarsource.scanner.maven:sonar-maven-plugin:3.9.0.2155"
+        final String sonarPluginGav = "org.sonarsource.scanner.maven:sonar-maven-plugin:3.9.1.2184"
         node(label: nodeLabel) {
-            stage("${isMainBuild ? 'Main ' : ''}Maven Build (JDK ${jdkVersion}, ${nodeLabel})") {
+            stage("${isMainBuild ? 'Main ' : ''}Maven Build (JDK ${jdkVersion}, Maven ${mavenVersion}, ${nodeLabel})") {
                 timeout(60) {
+                    final String mavenLabel = getMavenLabel(mavenVersion)
                     echo "Running on node ${env.NODE_NAME}"
                     checkout scm
                     try {
@@ -59,7 +85,7 @@ def buildStage(final int jdkVersion, final String nodeLabel, final boolean isMai
                         } else {
                             mavenArguments = '-U clean verify site'
                         }
-                        executeMaven(jdkLabel, mavenArguments, 'IMPLICIT')
+                        executeMaven(jdkLabel, mavenLabel, mavenArguments, 'IMPLICIT')
                         if (isMainBuild && isOnMainBranch()) {
                             // Stash the build results so we can deploy them on another node
                             stash name: 'local-snapshots-dir', includes: 'local-snapshots-dir/**'
@@ -98,12 +124,14 @@ def buildStage(final int jdkVersion, final String nodeLabel, final boolean isMai
     }
 }
 
-def stagesFor(List<Integer> jdkVersions, int mainJdkVersion, List<String> nodeLabels, String mainNodeLabel, String sonarProjectKey) {
+def stagesFor(List<Integer> jdkVersions, int mainJdkVersion, List<String> nodeLabels, String mainNodeLabel, List<String> mavenVersions, String mainMavenVersion, String sonarProjectKey) {
     def stageMap = [:]
     for (nodeLabel in nodeLabels) {
         for (jdkVersion in jdkVersions) {
-            boolean isMainBuild = (jdkVersion == mainJdkVersion && nodeLabel == mainNodeLabel)
-            stageMap["JDK ${jdkVersion}, ${nodeLabel}${isMainBuild ? ' (Main)' : ''}"] = buildStage(jdkVersion, nodeLabel, isMainBuild, sonarProjectKey)
+            for (mavenVersion in mavenVersions) {
+                boolean isMainBuild = (jdkVersion == mainJdkVersion && nodeLabel == mainNodeLabel && mainMavenVersion == mavenVersion)
+                stageMap["JDK ${jdkVersion}, ${nodeLabel}, Maven ${mavenVersion} ${isMainBuild ? ' (Main)' : ''}"] = buildStage(jdkVersion, nodeLabel, mavenVersion, isMainBuild, sonarProjectKey)
+            }
         }
     }
     return stageMap
@@ -111,9 +139,20 @@ def stagesFor(List<Integer> jdkVersions, int mainJdkVersion, List<String> nodeLa
 
 // valid node labels in https://cwiki.apache.org/confluence/display/INFRA/ci-builds.apache.org
 def call(List<Integer> jdkVersions, int mainJdkVersion, List<String> nodeLabels, String mainNodeLabel, String sonarProjectKey) {
+    call(jdkVersions, mainJdkVersion, nodeLabels, mainNodeLabel, ["3"], "3", sonarProjectKey)
+}
+
+def call(List<Integer> jdkVersions, int mainJdkVersion, List<String> nodeLabels, String mainNodeLabel, List<String> mavenVersions, String mainMavenVersion, String sonarProjectKey) {
     // adjust some job properties (https://www.jenkins.io/doc/pipeline/steps/workflow-multibranch/#properties-set-job-properties)
-    properties([
-        buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10'))
-    ])
-    parallel stagesFor(jdkVersions, mainJdkVersion, nodeLabels, mainNodeLabel, sonarProjectKey)
+    def buildProperties = []
+    if (isOnMainBranch()) {
+      // set build retention time first
+      buildProperties.add(buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '5', daysToKeepStr: '15', numToKeepStr: '10')))
+      // ensure a build is done every month
+      buildProperties.add(pipelineTriggers([cron('@monthly')]))
+    } else {
+      buildProperties.add(buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '2', daysToKeepStr: '7', numToKeepStr: '3')))
+    }
+    properties(buildProperties)
+    parallel stagesFor(jdkVersions, mainJdkVersion, nodeLabels, mainNodeLabel, mavenVersions, mainMavenVersion, sonarProjectKey)
 }
