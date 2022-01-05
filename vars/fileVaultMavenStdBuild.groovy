@@ -60,17 +60,14 @@ String getMavenLabel(String mavenVersion) {
     return "maven_${versionLabel}"
 }
 
-def buildStage(final int jdkVersion, final String nodeLabel, final String mavenVersion, final boolean isMainBuild, final String sonarProjectKey) {
+def buildStage(final String jdkLabel, final String nodeLabel, final String mavenVersion, final boolean isMainBuild, final String sonarProjectKey) {
     return {
-        // https://cwiki.apache.org/confluence/display/INFRA/JDK+Installation+Matrix
-        def availableJDKs = [ 8: 'jdk_1.8_latest', 9: 'jdk_1.9_latest', 10: 'jdk_10_latest', 11: 'jdk_11_latest', 12: 'jdk_12_latest', 13: 'jdk_13_latest', 14: 'jdk_14_latest', 15: 'jdk_15_latest', 16: 'jdk_16_latest', 17: 'jdk_17_latest', 18: 'jdk_18_latest', 19: 'jdk_19_latest']
-        final String jdkLabel = availableJDKs[jdkVersion]
         final String wagonPluginGav = "org.codehaus.mojo:wagon-maven-plugin:2.0.2"
         final String sonarPluginGav = "org.sonarsource.scanner.maven:sonar-maven-plugin:3.9.1.2184"
         node(label: nodeLabel) {
-            stage("${isMainBuild ? 'Main ' : ''}Maven Build (JDK ${jdkVersion}, Maven ${mavenVersion}, ${nodeLabel})") {
+            stage("${isMainBuild ? 'Main ' : ''}Maven Build (JDK ${jdkLabel}, Maven ${mavenVersion}, ${nodeLabel})") {
                 timeout(60) {
-                    final String mavenLabel = getMavenLabel(mavenVersion)
+                    final String mavenLabel = getMavenLabel(mavenVersion) // this requires a node context
                     echo "Running on node ${env.NODE_NAME}"
                     checkout scm
                     try {
@@ -81,20 +78,25 @@ def buildStage(final int jdkVersion, final String nodeLabel, final String mavenV
                             dir(localRepoPath) {
                                 deleteDir()
                             }
-                            mavenArguments = "-U clean site deploy -DaltDeploymentRepository=snapshot-repo::default::file:${localRepoPath} -Pjacoco-report -Dlogback.configurationFile=vault-core/src/test/resources/logback-only-errors.xml"
+                            mavenArguments = "-U clean site deploy -DskipITs -DaltDeploymentRepository=snapshot-repo::default::file:${localRepoPath} -Pjacoco-report -Dlogback.configurationFile=vault-core/src/test/resources/logback-only-errors.xml"
                         } else {
-                            mavenArguments = '-U clean verify site'
+                            mavenArguments = '-U clean package site'
                         }
                         executeMaven(jdkLabel, mavenLabel, mavenArguments, 'IMPLICIT')
-                        if (isMainBuild && isOnMainBranch()) {
-                            // Stash the build results so we can deploy them on another node
-                            stash name: 'local-snapshots-dir', includes: 'local-snapshots-dir/**'
+                        if (isMainBuild) {
+                            // stash the integration test classes for later execution
+                            stash name: 'integration-test-classes', includes: '**/target/test-classes/**'
+                            if (isOnMainBranch()) {
+                                // Stash the build results so we can deploy them on another node
+                                stash name: 'local-snapshots-dir', includes: 'local-snapshots-dir/**'
+                            }
                         }
                     } finally {
-                        junit '**/target/surefire-reports/**/*.xml,**/target/failsafe-reports*/**/*.xml'
+                        junit '**/target/surefire-reports/**/*.xml'
                     }
                 }
             }
+            /*
             if (isMainBuild) {
                 stage("SonarCloud Analysis") {
                     timeout(60) {
@@ -104,7 +106,7 @@ def buildStage(final int jdkVersion, final String nodeLabel, final String mavenV
                         }
                     }
                 }
-            }
+            }*/
         }
         if (isMainBuild && isOnMainBranch()) {
             stage("Deployment") {
@@ -124,13 +126,38 @@ def buildStage(final int jdkVersion, final String nodeLabel, final String mavenV
     }
 }
 
+def stageIT(final String jdkLabel, final String nodeLabel, final String mavenVersion) {
+    stage("Run Integration Tests") {
+        node(nodeLabel) {
+            timeout(60) {
+                // running ITs needs pom.xml
+                checkout scm
+                // Unstash the previously stashed build results.
+                unstash name: 'integration-test-classes'
+                try {
+                    final String mavenLabel = getMavenLabel(mavenVersion) // this requires a node context
+                    // populate test source directory
+                    String mavenArguments = '-X failsafe:integration-test failsafe:verify'
+                    executeMaven(jdkLabel, mavenLabel, mavenArguments, 'EXPLICIT')
+                } finally {
+                    junit '**/target/failsafe-reports*/**/*.xml'
+                }
+            }
+        }
+    }
+}
+
 def stagesFor(List<Integer> jdkVersions, int mainJdkVersion, List<String> nodeLabels, String mainNodeLabel, List<String> mavenVersions, String mainMavenVersion, String sonarProjectKey) {
     def stageMap = [:]
+    // https://cwiki.apache.org/confluence/display/INFRA/JDK+Installation+Matrix
+    def availableJDKs = [ 8: 'jdk_1.8_latest', 9: 'jdk_1.9_latest', 10: 'jdk_10_latest', 11: 'jdk_11_latest', 12: 'jdk_12_latest', 13: 'jdk_13_latest', 14: 'jdk_14_latest', 15: 'jdk_15_latest', 16: 'jdk_16_latest', 17: 'jdk_17_latest', 18: 'jdk_18_latest', 19: 'jdk_19_latest']
+    
     for (nodeLabel in nodeLabels) {
         for (jdkVersion in jdkVersions) {
+            final String jdkLabel = availableJDKs[jdkVersion]
             for (mavenVersion in mavenVersions) {
                 boolean isMainBuild = (jdkVersion == mainJdkVersion && nodeLabel == mainNodeLabel && mainMavenVersion == mavenVersion)
-                stageMap["JDK ${jdkVersion}, ${nodeLabel}, Maven ${mavenVersion} ${isMainBuild ? ' (Main)' : ''}"] = buildStage(jdkVersion, nodeLabel, mavenVersion, isMainBuild, sonarProjectKey)
+                stageMap["JDK ${jdkVersion}, ${nodeLabel}, Maven ${mavenVersion} ${isMainBuild ? ' (Main)' : ''}"] = buildStage(jdkLabel, nodeLabel, mavenVersion, isMainBuild, sonarProjectKey)
             }
         }
     }
@@ -155,4 +182,7 @@ def call(List<Integer> jdkVersions, int mainJdkVersion, List<String> nodeLabels,
     }
     properties(buildProperties)
     parallel stagesFor(jdkVersions, mainJdkVersion, nodeLabels, mainNodeLabel, mavenVersions, mainMavenVersion, sonarProjectKey)
+    // TODO: trigger ITs separately
+    stageIT('jdk_1.8_latest', mainNodeLabel, '3.3.9')
+    // finally do deploy
 }
