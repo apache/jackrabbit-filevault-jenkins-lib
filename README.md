@@ -4,15 +4,22 @@ This library is used for all FileVault Jenkins builds and enabled on <https://ci
 
 It follows the structure outlined at <https://www.jenkins.io/doc/book/pipeline/shared-libraries/>
 
-
 It is supposed to be called in a `Jenkinsfile` like this
 
 ```
-fileVaultMavenStdBuild([11, 8, 17], 11, [ "ubuntu", "Windows"], "ubuntu", "apache_jackrabbit-filevault")
+vaultPipeline('ubuntu', 11, '3', {
+   vaultStageBuild(['ubuntu', 'Windows'], [8, 11, 17], ['3', '3.6.3'], 'apache_jackrabbit-filevault-package-maven-plugin') 
+   vaultStageDeploy()
+  }
+)
 ```
 
-The first argument is an array of JDK versions to build with, the second one the main JDK version.
-The third argument is an array of node labels to build on, the fourth one the main node label.
-The fifth argument is the SonarCloud project key.
+The `vaultPipeline` step encapsulates the main build environment parameters:
+The first argument is the main *node label* to build with, the second one the main *JDK version*, third argument the main *Maven version*
+The fourth argument is a closure containing the actual stages where each may be one of
 
-The main parameters specify on which environment the lengthy (environment independent) steps should happen like SonarQube analysis and optional deployment.
+1. `vaultStageBuild`: the actual Maven build and SonarQube execution (the latter only for the main environment)
+1. `vaultStageIT`: an isolated execution of just the integration tests
+1. `vaultStageDeploy`: the stage to deploy the previously built Maven artifacts to the ASF Snapshot Repository (depends on 1.)
+
+For the parametrisation of those individual stages refer the source code.
