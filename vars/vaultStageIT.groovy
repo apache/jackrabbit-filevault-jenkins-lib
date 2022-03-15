@@ -30,6 +30,7 @@ def call(List<String> additionalNodeLabels, List<Integer> additionalJdkVersions,
                 stage("Run Integration Tests  (JDK ${jdkVersion}, Maven ${mavenVersion}, ${nodeLabel})") {
                     node(nodeLabel) {
                         timeout(60) {
+                            echo "Running on node ${env.NODE_NAME}"
                             // running ITs needs pom.xml
                             checkout scm
                             // Unstash the previously stashed build results.

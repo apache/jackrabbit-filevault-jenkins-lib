@@ -25,6 +25,7 @@ def deployStage(final PipelineSupport pipelineSupport) {
     stage("Deployment to Maven Repository") {
         node('nexus-deploy') {
             timeout(60) {
+                echo "Running on node ${env.NODE_NAME}"
                 // Nexus deployment needs pom.xml
                 checkout scm
                 // Unstash the previously stashed build results.
