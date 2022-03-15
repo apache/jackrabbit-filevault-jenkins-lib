@@ -26,6 +26,8 @@ def deployStage(final PipelineSupport pipelineSupport) {
         node('nexus-deploy') {
             timeout(60) {
                 echo "Running on node ${env.NODE_NAME}"
+                // first clear workspace
+                deleteDir
                 // Nexus deployment needs pom.xml
                 checkout scm
                 // Unstash the previously stashed build results.
