@@ -50,14 +50,15 @@ class PipelineSupport implements Serializable {
     }
 
     def executeMaven(pipeline, String mavenArguments, boolean enablePublishers) {
-        executeMaven(pipeline, mainJdkVersion, mainMavenVersion, mavenArguments, enablePublishers)
+        executeMaven(pipeline, mainJdkVersion, mainMavenVersion, mavenArguments, '', enablePublishers)
     }
 
-    static def executeMaven(pipeline, Integer jdkVersion, String mavenVersion, String mavenArguments, boolean enablePublishers) {
+    static def executeMaven(pipeline, Integer jdkVersion, String mavenVersion, String mavenArguments, String mavenOpts = '', boolean enablePublishers) {
         pipeline.withMaven(
             maven: AsfCloudbeesJenkinsEnvironment.getMavenLabel(!pipeline.isUnix(), mavenVersion),
             jdk: AsfCloudbeesJenkinsEnvironment.getJdkLabel(jdkVersion),
             mavenLocalRepo: '.repository',
+            mavenOpts: mavenOpts,
             publisherStrategy: enablePublishers?'IMPLICIT':'EXPLICIT') {
             if (pipeline.isUnix()) {
                 pipeline.sh "mvn -B ${mavenArguments}"
