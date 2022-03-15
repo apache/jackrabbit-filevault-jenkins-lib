@@ -32,7 +32,7 @@ def call(List<String> additionalNodeLabels, List<Integer> additionalJdkVersions,
                         timeout(60) {
                             echo "Running on node ${env.NODE_NAME}"
                             // first clear workspace
-                            deleteDir
+                            deleteDir()
                             // running ITs needs pom.xml
                             checkout scm
                             // Unstash the previously stashed build results.
