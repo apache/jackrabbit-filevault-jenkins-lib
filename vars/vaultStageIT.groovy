@@ -46,13 +46,8 @@ def call(List<String> additionalNodeLabels, List<Integer> additionalJdkVersions,
                                 } else {
                                     pipelineSupport.executeMaven(this, "install:install-file -Dfile=${jarFiles[0].path} -DpomFile=pom.xml", false)
                                 }
-                                String mavenOpts = '';
-                                // workaround for https://bugs.openjdk.java.net/browse/JDK-8057894
-                                if (!isUnix()) {
-                                    mavenOpts = '-Djava.security.egd=file:/dev/urandom';
-                                }
                                 // execute ITs
-                                pipelineSupport.executeMaven(this, jdkVersion, mavenVersion, 'failsafe:integration-test failsafe:verify', mavenOpts, false)
+                                pipelineSupport.executeMaven(this, jdkVersion, mavenVersion, 'failsafe:integration-test failsafe:verify', false)
                             } finally {
                                 junit '**/target/failsafe-reports*/**/*.xml'
                             }
