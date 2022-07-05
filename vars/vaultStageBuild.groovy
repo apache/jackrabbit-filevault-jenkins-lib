@@ -77,5 +77,5 @@ def call(List<String> additionalNodeLabels, List<Integer> additionalJdkVersions,
                     }
                 }
             }
-        } )
+        })
 }
