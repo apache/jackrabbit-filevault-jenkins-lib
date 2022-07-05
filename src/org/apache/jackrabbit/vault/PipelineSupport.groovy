@@ -34,7 +34,7 @@ class PipelineSupport implements Serializable {
         if (INSTANCE == null) {
             throw new IllegalStateException("createInstance has not been called before, not wrapped in vaultPipeline step?")
         }
-        return INSTANCE;
+        return INSTANCE
     }
 
     private final String mainNodeLabel;
@@ -44,7 +44,7 @@ class PipelineSupport implements Serializable {
 
     PipelineSupport(String mainNodeLabel, int mainJdkVersion, String mainMavenVersion, boolean isOnMainBranch) {
         this.mainNodeLabel = mainNodeLabel
-        this.mainJdkVersion = mainJdkVersion;
+        this.mainJdkVersion = mainJdkVersion
         this.mainMavenVersion = mainMavenVersion
         this.isOnMainBranch = isOnMainBranch
     }
@@ -73,18 +73,22 @@ class PipelineSupport implements Serializable {
     }
 
     def stepsFor(String stepsLabel, Set<String> nodeLabels, Set<Integer> jdkVersions, Set<String> mavenVersions, Closure closure, boolean excludeMain = false) {
-        def stepsMap = [:]
+        def stepsMap = [failFast: true]
         for (nodeLabel in nodeLabels) {
             for (jdkVersion in jdkVersions) {
                 for (mavenVersion in mavenVersions) {
                     boolean isMainBuild = (nodeLabel.equals(mainNodeLabel) && jdkVersion.equals(mainJdkVersion) && mavenVersion.equals(mainMavenVersion))
                     if (excludeMain && isMainBuild) {
-                        continue; // skip main environment
+                        continue // skip main environment
                     }
                     stepsMap["${stepsLabel} (JDK ${jdkVersion}, ${nodeLabel}, Maven ${mavenVersion}${isMainBuild ? ' (Main)' : ''})"] = closure(nodeLabel, jdkVersion, mavenVersion, isMainBuild)
                 }
             }
         }
         return stepsMap
+    }
+
+    String getMainNodeLabel() {
+        return mainNodeLabel
     }
 }
