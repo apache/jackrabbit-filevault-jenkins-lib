@@ -22,8 +22,8 @@ import org.apache.jackrabbit.vault.PipelineSupport
 // valid node labels in https://cwiki.apache.org/confluence/display/INFRA/ci-builds.apache.org
 def call(List<String> additionalNodeLabels, List<Integer> additionalJdkVersions, List<String> additionalMavenVersions, String sonarProjectKey, Map options=[:]) {
     boolean hasSeparateItExecution = options.hasSeparateItExecution ?: false
-    String mainBuildArguments = options.mainBuildArguments ?: "-U -e clean site deploy -Pjacoco-report -Dlogback.configurationFile=vault-core/src/test/resources/logback-only-errors.xml"
-    String additionalBuildArguments = options.additionalBuildArguments ?: "-U -e clean ${hasSeparateItExecution?'package':'verify'} site"
+    String mainBuildArguments = options.mainBuildArguments ?: "-U clean site deploy -Pjacoco-report -Dlogback.configurationFile=vault-core/src/test/resources/logback-only-errors.xml"
+    String additionalBuildArguments = options.additionalBuildArguments ?: "-U clean ${hasSeparateItExecution?'package':'verify'} site"
     PipelineSupport pipelineSupport = PipelineSupport.getInstance()
     parallel pipelineSupport.stepsForMainAndAdditional('Maven Build', additionalNodeLabels.toSet(), additionalJdkVersions.toSet(), additionalMavenVersions.toSet(), 
         { String nodeLabel, Integer jdkVersion, String mavenVersion, boolean isMainBuild -> 
