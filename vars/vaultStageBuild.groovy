@@ -68,9 +68,10 @@ def call(List<String> additionalNodeLabels, List<Integer> additionalJdkVersions,
                     if (isMainBuild) {
                         stage("SonarCloud Analysis") {
                             timeout(60) {
+                                // always use Java 17 (https://docs.sonarcloud.io/appendices/scanner-environment/)
                                 withCredentials([string(credentialsId: 'sonarcloud-filevault-token', variable: 'SONAR_TOKEN')]) {
                                     String mavenArguments = "${sonarPluginGav}:sonar -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=apache -Dsonar.projectKey=${sonarProjectKey}"
-                                    pipelineSupport.executeMaven(this, mavenArguments, false)
+                                    pipelineSupport.executeMaven(this, 17, mavenArguments, false)
                                 }
                             }
                         }

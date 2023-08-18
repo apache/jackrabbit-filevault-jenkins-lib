@@ -50,7 +50,11 @@ class PipelineSupport implements Serializable {
     }
 
     def executeMaven(pipeline, String mavenArguments, boolean enablePublishers) {
-        executeMaven(pipeline, mainJdkVersion, mainMavenVersion, mavenArguments, '', enablePublishers)
+        executeMaven(pipeline, mainJdkVersion, mavenArguments, enablePublishers)
+    }
+
+    def executeMaven(pipeline, Integer jdkVersion, String mavenArguments, boolean enablePublishers) {
+        executeMaven(pipeline, jdkVersion, mainMavenVersion, mavenArguments, '', enablePublishers)
     }
 
     static def executeMaven(pipeline, Integer jdkVersion, String mavenVersion, String mavenArguments, String mavenOpts = '', boolean enablePublishers) {
