@@ -57,6 +57,15 @@ class PipelineSupport implements Serializable {
         executeMaven(pipeline, jdkVersion, mainMavenVersion, mavenArguments, '', enablePublishers)
     }
 
+    static def withSimpleCredentials(pipeline, Map<String, String> credentialIdToEnvironmentVariable, Closure closure) {
+        if (credentialIdToEnvironmentVariable == null) {
+            closure.call()
+        } else {
+            def bindings = credentialIdToEnvironmentVariable.collect{ e -> pipeline.string(credentialsId: e.key, variable: e.value) }
+            pipeline.withCredentials(bindings, closure)
+        }
+    }
+
     static def executeMaven(pipeline, Integer jdkVersion, String mavenVersion, String mavenArguments, String mavenOpts = '', boolean enablePublishers) {
         pipeline.withMaven(
             maven: AsfCloudbeesJenkinsEnvironment.getMavenLabel(!pipeline.isUnix(), mavenVersion),
