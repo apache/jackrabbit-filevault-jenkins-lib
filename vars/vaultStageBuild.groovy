@@ -47,7 +47,9 @@ def call(List<String> additionalNodeLabels, List<Integer> additionalJdkVersions,
                                 } else {
                                     mavenArguments = additionalBuildArguments
                                 }
-                                PipelineSupport.executeMaven(this, jdkVersion, mavenVersion, mavenArguments, false)
+                                PipelineSupport.withSimpleCredentials(this, options.simpleCredentialsMap) {
+                                    PipelineSupport.executeMaven(this, jdkVersion, mavenVersion, mavenArguments, false)
+                                }
                                 if (isMainBuild) {
                                     if (hasSeparateItExecution) {
                                         // stash the integration test classes and the build artifact for later execution
