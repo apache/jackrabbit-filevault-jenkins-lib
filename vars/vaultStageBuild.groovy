@@ -28,7 +28,7 @@ def call(List<String> additionalNodeLabels, List<Integer> additionalJdkVersions,
     parallel pipelineSupport.stepsForMainAndAdditional('Maven Build', additionalNodeLabels.toSet(), additionalJdkVersions.toSet(), additionalMavenVersions.toSet(), 
         { String nodeLabel, Integer jdkVersion, String mavenVersion, boolean isMainBuild -> 
             return {
-                final String sonarPluginGav = "org.sonarsource.scanner.maven:sonar-maven-plugin:3.9.1.2184"
+                final String sonarPluginGav = "org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121"
                 node(label: nodeLabel) {
                     stage("${isMainBuild ? 'Main ' : ''}Maven Build (JDK ${jdkVersion}, Maven ${mavenVersion}, ${nodeLabel})") {
                         timeout(60) {
