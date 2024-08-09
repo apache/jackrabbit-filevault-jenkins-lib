@@ -37,7 +37,7 @@ class AsfCloudbeesJenkinsEnvironment {
         } else {
             throw new IllegalArgumentException('mavenVersion must be either one integer or three integers separated by dot')
         }
-        // valid installation names in https://cwiki.apache.org/confluence/display/INFRA/Maven+Installation+Matrix and https://github.com/apache/infrastructure-p6/blob/production/modules/jenkins_client_master/files/hudson.tasks.Maven.xml
+        // valid installation names in https://cwiki.apache.org/confluence/display/INFRA/Maven+Installation+Matrix and https://github.com/apache/infrastructure-p6/blob/production/modules/jenkins_client_master/files/setmaven.groovy
         return "maven_${versionLabel}"
     }
 
