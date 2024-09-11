@@ -73,6 +73,8 @@ def call(List<String> additionalNodeLabels, List<Integer> additionalJdkVersions,
                                 // always use Java 17 (https://docs.sonarcloud.io/appendices/scanner-environment/)
                                 withCredentials([string(credentialsId: 'sonarcloud-filevault-token', variable: 'SONAR_TOKEN')]) {
                                     String mavenArguments = "${sonarPluginGav}:sonar -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=apache -Dsonar.projectKey=${sonarProjectKey}"
+                                    // add variables for branch analysis: https://docs.sonarsource.com/sonarcloud/enriching/branch-analysis-setup/#setup-with-a-non-integrated-build-environment
+                                    mavenArguments += " -Dssonar.branch.name=${env.BRANCH_NAME} -Dsonar.branch.target=master"
                                     pipelineSupport.executeMaven(this, 17, mavenArguments, false)
                                 }
                             }
