@@ -21,10 +21,10 @@ import org.apache.jackrabbit.vault.PipelineSupport
 
 // valid node labels in https://cwiki.apache.org/confluence/display/INFRA/ci-builds.apache.org
 def call(String mainNodeLabel, int mainJdkVersion, String mainMavenVersion, Closure body) {
-    PipelineSupport pipelineSupport = PipelineSupport.createInstance(mainNodeLabel, mainJdkVersion, mainMavenVersion, env.BRANCH_NAME == 'master')
+    PipelineSupport pipelineSupport = PipelineSupport.createInstance(mainNodeLabel, mainJdkVersion, mainMavenVersion, 'master')
     // adjust some job properties (https://www.jenkins.io/doc/pipeline/steps/workflow-multibranch/#properties-set-job-properties)
     def buildProperties = []
-    if (pipelineSupport.isOnMainBranch) {
+    if (pipelineSupport.isOnMainBranch(env.BRANCH_NAME)) {
       echo "Building main branch ${env.BRANCH_NAME}"
       // set build retention time first
       buildProperties.add(buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '5', daysToKeepStr: '15', numToKeepStr: '10')))

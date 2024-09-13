@@ -55,7 +55,7 @@ def call(List<String> additionalNodeLabels, List<Integer> additionalJdkVersions,
                                         // stash the integration test classes and the build artifact for later execution
                                         stash name: 'integration-test-classes', includes: '**/target/test-classes/**,**/target/*.jar'
                                     }
-                                    if (pipelineSupport.isOnMainBranch) {
+                                    if (pipelineSupport.isOnMainBranch(env.BRANCH_NAME)) {
                                         // Stash the build results so we can deploy them on another node
                                         stash name: 'local-snapshots-dir', includes: 'local-snapshots-dir/**'
                                     }
@@ -74,7 +74,9 @@ def call(List<String> additionalNodeLabels, List<Integer> additionalJdkVersions,
                                 withCredentials([string(credentialsId: 'sonarcloud-filevault-token', variable: 'SONAR_TOKEN')]) {
                                     String mavenArguments = "${sonarPluginGav}:sonar -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=apache -Dsonar.projectKey=${sonarProjectKey}"
                                     // add variables for branch analysis: https://docs.sonarsource.com/sonarcloud/enriching/branch-analysis-setup/#setup-with-a-non-integrated-build-environment
-                                    mavenArguments += " -Dsonar.branch.name=${env.BRANCH_NAME} -Dsonar.branch.target=master"
+                                    if (!pipelineSupport.isOnMainBranch(env.BRANCH_NAME)) {
+                                        mavenArguments += " -Dsonar.branch.name=${env.BRANCH_NAME} -Dsonar.branch.target=${pipelineSupport.getMainBranch()}"
+                                    }
                                     pipelineSupport.executeMaven(this, 17, mavenArguments, false)
                                 }
                             }

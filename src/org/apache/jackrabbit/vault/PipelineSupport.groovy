@@ -23,10 +23,10 @@ package org.apache.jackrabbit.vault
  */
 class PipelineSupport implements Serializable {
     
-    static PipelineSupport INSTANCE;
+    static PipelineSupport INSTANCE
     
-    static PipelineSupport createInstance(String mainNodeLabel, int mainJdkVersion, String mainMavenVersion, boolean isOnMainBranch) {
-        INSTANCE = new PipelineSupport(mainNodeLabel, mainJdkVersion, mainMavenVersion, isOnMainBranch)
+    static PipelineSupport createInstance(String mainNodeLabel, int mainJdkVersion, String mainMavenVersion, String mainBranch) {
+        INSTANCE = new PipelineSupport(mainNodeLabel, mainJdkVersion, mainMavenVersion, mainBranch)
         return INSTANCE
     }
 
@@ -37,16 +37,16 @@ class PipelineSupport implements Serializable {
         return INSTANCE
     }
 
-    private final String mainNodeLabel;
-    private final Integer mainJdkVersion;
-    private final String mainMavenVersion;
-    private final boolean isOnMainBranch;
+    private final String mainNodeLabel
+    private final Integer mainJdkVersion
+    private final String mainMavenVersion
+    private final String mainBranch
 
-    PipelineSupport(String mainNodeLabel, int mainJdkVersion, String mainMavenVersion, boolean isOnMainBranch) {
+    PipelineSupport(String mainNodeLabel, int mainJdkVersion, String mainMavenVersion, String mainBranch) {
         this.mainNodeLabel = mainNodeLabel
         this.mainJdkVersion = mainJdkVersion
         this.mainMavenVersion = mainMavenVersion
-        this.isOnMainBranch = isOnMainBranch
+        this.mainBranch = mainBranch
     }
 
     def executeMaven(pipeline, String mavenArguments, boolean enablePublishers) {
@@ -103,5 +103,13 @@ class PipelineSupport implements Serializable {
 
     String getMainNodeLabel() {
         return mainNodeLabel
+    }
+
+    boolean isOnMainBranch(String currentBranch) {
+        return mainBranch == currentBranch
+    }
+
+    String getMainBranch() {
+        return mainBranch
     }
 }
