@@ -42,7 +42,7 @@ def deployStage(final PipelineSupport pipelineSupport) {
 
 def call() {
     PipelineSupport pipelineSupport = PipelineSupport.getInstance()
-    if (pipelineSupport.isOnMainBranch) {
+    if (pipelineSupport.isOnMainBranch(env.BRANCH_NAME))) {
         deployStage(pipelineSupport)
     }
 }
