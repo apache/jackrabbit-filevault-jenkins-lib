@@ -90,6 +90,9 @@ class PipelineSupport implements Serializable {
         for (nodeLabel in nodeLabels) {
             for (jdkVersion in jdkVersions) {
                 for (mavenVersion in mavenVersions) {
+                    if (mavenVersion.startsWith('4') && jdkVersion < 17) {
+                        continue; // skip incompatible combinations
+                    }
                     boolean isMainBuild = (nodeLabel.equals(mainNodeLabel) && jdkVersion.equals(mainJdkVersion) && mavenVersion.equals(mainMavenVersion))
                     if (excludeMain && isMainBuild) {
                         continue // skip main environment
