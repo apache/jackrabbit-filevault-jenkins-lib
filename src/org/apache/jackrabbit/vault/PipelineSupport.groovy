@@ -69,7 +69,7 @@ class PipelineSupport implements Serializable {
     static def executeMaven(pipeline, Integer jdkVersion, String mavenVersion, String mavenArguments, String mavenOpts = '', boolean enablePublishers) {
         String maven = AsfCloudbeesJenkinsEnvironment.getMavenLabel(!pipeline.isUnix(), mavenVersion)
         String jdk = AsfCloudbeesJenkinsEnvironment.getJdkLabel(jdkVersion)
-        pipeline.echo("Using Maven '${maven}' with JDK '{jdk}'")
+        pipeline.echo("Using Maven '${maven}' with JDK '${jdk}'")
         pipeline.withMaven(
             maven: maven,
             jdk: jdk,
