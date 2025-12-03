@@ -77,8 +77,10 @@ class PipelineSupport implements Serializable {
             mavenOpts: mavenOpts,
             publisherStrategy: enablePublishers?'IMPLICIT':'EXPLICIT') {
             if (pipeline.isUnix()) {
+                pipeline.sh 'mvn -version'
                 pipeline.sh "mvn -B -e ${mavenArguments}"
             } else {
+                pipeline.bat 'mvn -version'
                 pipeline.bat "mvn -B -e ${mavenArguments}"
             }
         }
