@@ -28,7 +28,7 @@ def call(List<String> additionalNodeLabels, List<Integer> additionalJdkVersions,
     parallel pipelineSupport.stepsForMainAndAdditional('Maven Build', additionalNodeLabels.toSet(), additionalJdkVersions.toSet(), additionalMavenVersions.toSet(), 
         { String nodeLabel, Integer jdkVersion, String mavenVersion, boolean isMainBuild -> 
             return {
-                final String sonarPluginGav = "org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121"
+                final String sonarPluginGav = "org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356"
                 node(label: nodeLabel) {
                     stage("${isMainBuild ? 'Main ' : ''}Maven Build (JDK ${jdkVersion}, Maven ${mavenVersion}, ${nodeLabel})") {
                         timeout(60) {
@@ -68,16 +68,16 @@ def call(List<String> additionalNodeLabels, List<Integer> additionalJdkVersions,
                         }
                     }
                     if (isMainBuild) {
-                        stage("SonarCloud Analysis") {
+                        stage("SonarQube Analysis") {
                             timeout(60) {
-                                // always use Java 17 (https://docs.sonarcloud.io/appendices/scanner-environment/)
+                                // always use Java 21 (https://docs.sonarcloud.io/appendices/scanner-environment/)
                                 withCredentials([string(credentialsId: 'sonarcloud-filevault-token', variable: 'SONAR_TOKEN')]) {
                                     String mavenArguments = "${sonarPluginGav}:sonar -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=apache -Dsonar.projectKey=${sonarProjectKey}"
                                     // add variables for branch analysis: https://docs.sonarsource.com/sonarcloud/enriching/branch-analysis-setup/#setup-with-a-non-integrated-build-environment
                                     if (!pipelineSupport.isOnMainBranch(env.BRANCH_NAME)) {
                                         mavenArguments += " -Dsonar.branch.name=${env.BRANCH_NAME} -Dsonar.branch.target=${pipelineSupport.getMainBranch()}"
                                     }
-                                    pipelineSupport.executeMaven(this, 17, mavenArguments, false)
+                                    pipelineSupport.executeMaven(this, 21, mavenArguments, false)
                                 }
                             }
                         }
